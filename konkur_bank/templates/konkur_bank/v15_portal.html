@@ -1,0 +1,71 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div dir="rtl" style="max-width:980px;text-align:right;margin:auto">
+<h2>مدیریت بانک کنکور — {{ title }}</h2>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin:14px 0">
+{% for item in nav %}<a href="{{ item.url }}" class="button" style="padding:10px;{% if item.selected %}border:2px solid #2563eb;{% endif %}">{{ item.name }}</a>{% endfor %}
+</div>
+<p>هر ورودی مستقل است: یک فایل داوری‌شده، بررسی خودکار و یک تأیید نهایی. سایر بخش‌ها از این انتشار تأثیر نمی‌گیرند.</p>
+<p><a href="{{ template_link }}" class="button">دانلود قالب اکسل همین بخش</a></p>
+<div style="border:1px solid #d1d5db;padding:16px;border-radius:10px;margin:16px 0">
+<form method="post" enctype="multipart/form-data">
+{% csrf_token %}
+{{ form.non_field_errors }}
+<p>{{ form.package.label_tag }} {{ form.package }} {{ form.package.errors }}</p>
+<p>{{ form.action.label_tag }} {{ form.action }} {{ form.action.errors }}</p>
+{% if not can_publish %}<p style="color:#a16207">انتشار این نسخه در تنظیمات غیرفعال است؛ فقط بررسی فایل مجاز است.</p>{% endif %}
+<button type="submit" class="button default">اجرای عملیات انتخاب‌شده</button>
+</form>
+</div>
+{% if report %}<h3>پیش‌نمایش فایل</h3>
+<table><tbody><tr><th>شناسه بسته</th><td>{{ report.package_id }}</td></tr>
+<tr><th>سؤال مستقل</th><td>{{ report.question_count }}</td></tr>
+<tr><th>عضویت در مجموعه‌ها</th><td>{{ report.membership_count }}</td></tr>
+<tr><th>هشدارها</th><td>{{ report.warnings|length }}</td></tr></tbody></table>
+{% for warning in report.warnings %}<p style="color:#a16207">{{ warning }}</p>{% endfor %}{% endif %}
+<h3>مجموعه‌های این بخش</h3>
+<form method="get"><input type="search" name="q" value="{{ search }}" placeholder="جست‌وجو بر اساس شناسه مجموعه"><button type="submit" class="button">جست‌وجو</button></form>
+<table><thead><tr><th>شناسه</th><th>عنوان</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody>
+{% for rec in recent %}<tr><td>{{ rec.id }}</td><td>{{ rec.title }}</td>
+<td>{% if rec.active %}منتشرشده{% else %}غیرفعال{% endif %}</td>
+<td><a href="?set={{ rec.id|urlencode }}">سؤالات / ویرایش</a> <form method="post">{% csrf_token %}
+<input type="hidden" name="toggle_record" value="{{ rec.id }}">
+{% if rec.active %}<input type="hidden" name="toggle_action" value="disable"><button class="button" type="submit">غیرفعال‌سازی</button>
+{% else %}<input type="hidden" name="toggle_action" value="enable"><button class="button" type="submit">انتشار مجدد</button>{% endif %}</form></td></tr>
+{% empty %}<tr><td colspan="4">مجموعه‌ای ثبت نشده است.</td></tr>{% endfor %}
+</tbody></table>
+{% if published %}<p>وضعیت: {{ published.status }} | بسته: {{ published.package_id }} | سؤال: {{ published.questions }}</p>{% endif %}
+<p style="font-size:12px;color:#64748b">از ثبت مجدد بسته مشابه جلوگیری می‌شود. خطا در هر رکورد به معنی لغو کل تراکنش انتشار است؛ هیچ آزمون یا کارنامه قبلی حذف نمی‌شود.</p>
+</div>
+
+
+{% if selected %}
+<section style="margin-top:25px;padding:14px;border:1px solid #ddd;border-radius:10px">
+<h3>سؤال‌های این مجموعه — {{ displayed_questions|length }} مورد نخست</h3>
+<form method="post">{% csrf_token %}
+<input type="hidden" name="save_title" value="{{ selected.pk }}">
+<label>ویرایش عنوان مجموعه: <input name="new_title" required maxlength="200" value="{% if selected.metadata.title %}{{ selected.metadata.title }}{% elif selected.metadata.public_topic %}{{ selected.metadata.public_topic }}{% else %}{{ selected.metadata.exam_id }}{% endif %}"></label>
+<button type="submit" class="button">ذخیره عنوان</button>
+</form>
+<table><thead><tr><th>شناسه داخلی</th><th>شناسه منبع</th><th>متن سؤال</th><th>عملیات</th></tr></thead>
+<tbody>{% for question in displayed_questions %}<tr>
+<td>{{ question.pk }}</td><td>{{ question.payload.source_question_id }}</td>
+<td>{{ question.payload.stem|truncatechars:120 }}</td>
+<td><a href="?set={{ selected_id|urlencode }}&amp;edit_q={{ question.pk|urlencode }}">ویرایش در همین صفحه</a></td>
+</tr>{% empty %}<tr><td colspan="4">سؤالی ثبت نشده است.</td></tr>{% endfor %}</tbody></table>
+{% if edit_form %}
+<div style="border:1px solid #93c5fd;padding:16px;border-radius:10px">
+<h3>ویرایش سؤال — {{ edit_question_id }}</h3>
+<form method="post">{% csrf_token %}
+<input type="hidden" name="set" value="{{ selected_id }}">
+<input type="hidden" name="edit_q" value="{{ edit_question_id }}">
+<input type="hidden" name="save_question" value="1">
+{{ edit_form.as_p }}
+<button class="button default" type="submit">ثبت ویرایش این سؤال</button>
+</form>
+</div>
+{% endif %}
+</section>
+{% endif %}
+
+{% endblock %}

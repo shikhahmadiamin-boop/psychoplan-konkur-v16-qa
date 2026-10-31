@@ -1,0 +1,43 @@
+name: PsychoPlan V16 isolated PostgreSQL QA
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: psychoplan_v16_ci
+          POSTGRES_USER: v16_tester
+          POSTGRES_PASSWORD: local_ci_only_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U v16_tester -d psychoplan_v16_ci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install isolated test dependencies
+        run: pip install -r requirements.txt
+      - name: Verify V16 baseline-only files and package syntax
+        run: python -m compileall -q konkur_bank tests
+      - name: V16 regression and selector tests
+        run: python -m unittest -q tests.test_independent_mode tests.test_v16_regressions
+      - name: PostgreSQL 17 E2E (no production access)
+        env:
+          CI: 'true'
+          QA_DB_HOST: '127.0.0.1'
+          QA_DB_NAME: 'psychoplan_v16_ci'
+          QA_DB_USER: 'v16_tester'
+          QA_DB_PASSWORD: 'local_ci_only_password'
+        run: python tests/pg_e2e.py

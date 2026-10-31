@@ -1,0 +1,57 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div style="max-width:960px;direction:rtl;text-align:right;font-family:inherit">
+  <h2>{{ title }}</h2>
+  <p><a class='button' href='{{ template_link }}'>دانلود قالب اکسل همین بخش</a></p>
+  <p style="line-height:2">فایل اکسل یا ZIP استاندارد سایکوپلن را بارگذاری کنید. پیش‌نمایش هیچ اطلاعاتی ذخیره نمی‌کند. ثبت فایل به‌تنهایی هیچ سؤالی را منتشر نمی‌کند؛ انتشار فقط از بخش داوری نهایی و پس از تأیید علمی و مجوز انجام می‌شود.</p>
+  {% if kind == 'OFFICIAL_YEARLY' %}
+    <p><strong>سه نمای خودکار:</strong> پیشنهاد فصل‌بندی برای داوری مدیر | جامع درس در بازه سالانه | کنکور کامل (فقط پس از تطبیق همه سؤالات دفترچه)</p>
+    <p><a class="button" href="{% url 'admin:konkur_bank_questionclassification_changelist' %}">بازبینی علمی فصل و مبحث سؤال‌ها (پس از ورود آزمایشی)</a></p>
+  {% else %}
+    <p><strong>تحلیل هوشمند:</strong> خانواده مفهومی، سؤال‌های هم‌خانواده تألیفی، رابطه با سؤال اصلی، پاسخ تشریحی و رد سایر گزینه‌ها.</p>
+  {% endif %}
+  <div style="border:1px solid #cbd5e1;padding:14px;border-radius:12px;margin:16px 0;background:var(--body-bg,#fff)">
+    <h3>مدیریت نهایی سؤال‌ها و انتشار</h3>
+    <p><strong>سؤالات ثبت‌شده:</strong> {{ publication_total }} | <strong>پیش‌نویس:</strong> {{ publication_draft }} | <strong>منتشرشده:</strong> {{ publication_published }}</p>
+    <p>ابتدا متن، گزینه‌ها و کلید را در «ویرایش سؤال‌ها» تکمیل کنید؛ پاسخ تشریحی را اضافه کنید؛ فصل و مبحث را تأیید کنید. پس از تکمیل و احراز مجوز بازنشر، سؤال‌های موردنظر را انتخاب و از منوی عملیات، «بررسی و انتشار نهایی» را بزنید. در صورت نقص، انتشار کل انتخاب متوقف می‌شود.</p>
+    <p><a class="button" href="{% url 'admin:konkur_bank_bankquestion_changelist' %}">۱. ویرایش سؤال‌ها و انتشار / لغو انتشار</a>
+      <a class="button" href="{% url 'admin:konkur_bank_questionexplanation_changelist' %}">۲. پاسخنامه‌های تشریحی</a>
+      <a class="button" href="{% url 'admin:konkur_bank_questionclassification_changelist' %}">۳. تأیید فصل و مبحث</a>
+      {% if kind == 'ANALYSIS_FAMILY' %}<a class="button" href="{% url 'admin:konkur_bank_questionfamily_changelist' %}">۴. داوری خانواده‌های مفهومی</a>{% endif %}</p>
+    <p style="color:#986000"><strong>هشدار:</strong> سؤال ناقص یا بدون کلید معتبر و مستند مجوز بازنشر، منتشر نمی‌شود. لغو انتشار کارنامه‌های قبلی را حذف نمی‌کند.</p>
+  </div>
+  <form method="post" enctype="multipart/form-data" style="background:var(--darkened-bg,#f8f9fa);padding:18px;border-radius:12px;max-width:650px">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <p>{{ form.package.label_tag }} {{ form.package }} {{ form.package.errors }}</p>
+    <p>{{ form.action.label_tag }} {{ form.action }} {{ form.action.errors }}</p>
+    {% if not can_draft %}<p style="color:#986000">ثبت پیش‌نویس از تنظیمات مدیریت غیرفعال است. فقط پیش‌نمایش قابل استفاده است.</p>{% endif %}
+    <button type="submit" class="button default">اجرای اعتبارسنجی / عملیات انتخابی</button>
+  </form>
+  {% if report %}
+    <h3>نتیجه بررسی</h3>
+    <table style="max-width:800px"><tr><th>شناسه بسته</th><td>{{ report.package_id }}</td></tr>
+    <tr><th>تعداد سؤال</th><td>{{ report.question_count }}</td></tr>
+    <tr><th>نوع بسته</th><td>{{ report.kind }}</td></tr>
+    <tr><th>انتشار خودکار</th><td>غیرفعال</td></tr></table>
+    {% if report.automatic_modes %}
+      <h3>پیش‌نمایش سه مدل آزمون</h3>
+      <p>گروه‌های موضوعی پیشنهادی: {{ report.automatic_modes.chapter_groups }} | فاقد مبحث: {{ report.automatic_modes.questions_without_topic }} | برچسب‌های تأییدنشده در اکسل: {{ report.automatic_modes.questions_topic_not_confirmed }}</p>
+      <p><strong>توجه:</strong> هیچ برچسبی فقط با بارگذاری اکسل تأیید علمی نمی‌شود؛ تأیید در صفحه بازبینی توسط مدیر صورت می‌گیرد.</p>
+      <p>مجموعه‌های سال/درس: {{ report.automatic_modes.subject_year_groups }}</p>
+      <h4>جامع درس در بازه سالانه</h4>
+      <table><thead><tr><th>درس</th><th>بازه</th><th>سؤال</th><th>سال موجود</th><th>وضعیت</th></tr></thead><tbody>
+       {% for s in report.automatic_modes.subject_windows %}
+        <tr><td>{{ s.subject_code }}</td><td>{{ s.year_from }}–{{ s.year_to }}</td><td>{{ s.question_count }}</td><td>{{ s.years_present }}</td><td>{% if s.window_complete %}بازه پوشش داده شده{% else %}در انتظار سال‌های دیگر{% endif %}</td></tr>
+       {% endfor %}
+      </tbody></table>
+      <h4>کنکور سالانه</h4>
+      {% for f in report.automatic_modes.full_exams %}<p>{{ f.exam_id }} — {{ f.question_count }} سؤال — {{ f.label }}</p>{% endfor %}
+    {% else %}
+      <p>خانواده‌ها: {{ report.families }} | مفاهیم: {{ report.concepts }} | پاسخنامه‌ها: {{ report.explanations }}</p>
+    {% endif %}
+    <h4>هشدارهای علمی و ساختاری</h4>
+    {% for warning in report.warnings %}<p style="color:#986000">{{ warning }}</p>{% empty %}<p>هشدار ساختاری ثبت نشد؛ داوری علمی همچنان الزامی است.</p>{% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

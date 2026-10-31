@@ -1,0 +1,17 @@
+{% extends 'admin/base_site.html' %}
+{% block content %}
+<div dir="rtl" style="max-width:750px;line-height:2">
+<h2>{{ title }}</h2>
+<p>در حال انجام عملیات برای <strong>{{ count }} سؤال</strong> هستید. انتشار تنها پس از عبور همه سؤالات از کنترل کلید، پاسخنامه، بازبینی علمی و مجوز انجام می‌شود؛ اگر یک سؤال ناقص باشد کل انتخاب بدون تغییر می‌ماند.</p>
+{% if action_code == 'unpublish' %}<p>لغو انتشار، کارنامه‌های قبلی دانشجویان را حذف نمی‌کند.</p>{% endif %}
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="action" value="{{ action_name }}">
+  <input type="hidden" name="index" value="0">
+  <input type="hidden" name="select_across" value="0">
+  <input type="hidden" name="confirm_editorial_action" value="{{ action_code }}">
+  {% for qid in question_ids %}<input type="hidden" name="_selected_action" value="{{ qid }}">{% endfor %}
+  <button type="submit" class="button default">{% if action_code == 'publish' %}تأیید و انتشار نهایی{% else %}لغو انتشار تأییدشده{% endif %}</button>
+  <a href="{% url 'admin:konkur_bank_bankquestion_changelist' %}" style="margin:12px">بازگشت بدون تغییر</a>
+</form>
+</div>
+{% endblock %}
